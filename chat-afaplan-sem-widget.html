@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta-name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Afaplan</title>
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/geist-font/1.0.0/fonts/geist-sans/style.min.css">
+
+  <style>
+    body {
+      font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ------- ANIMAÇÕES ------- */
+    .fade-in {
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+
+    .fade-out {
+      animation: fadeOut 0.25s ease-in forwards;
+    }
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+    }
+
+    /* ANIMAÇÃO FULLSCREEN */
+    .fullscreen-animate {
+      transition: all 0.25s ease;
+    }
+
+    /* FULLSCREEN */
+    .fullscreen {
+      width: 100vw !important;
+      height: 100vh !important;
+      bottom: 0 !important;
+      right: 0 !important;
+      border-radius: 0 !important;
+    }
+
+    /* ------- CONTAINER CHAT ------- */
+    #chat-widget-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      height: 520px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      display: flex; /* --> chat sempre aberto */
+      flex-direction: column;
+      z-index: 1000;
+      overflow: hidden;
+      border: 1px solid #e0e0e0;
+
+      transition: all 0.25s ease;
+    }
+
+    /* ------- HEADER ------- */
+    #chat-widget-header {
+      background: #225AD5;
+      color: white;
+      padding: 18px 20px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 17px;
+    }
+
+    #chat-widget-header button {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 14px;
+    }
+
+    /* ------- BODY ------- */
+    #chat-widget-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #f8f9fc;
+    }
+
+    #chat-widget-body p {
+      margin-bottom: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      word-wrap: break-word;
+      max-width: 90%;
+    }
+
+    .user-msg {
+      background: #d1d5db;
+      color: #111;
+      margin-left: auto;
+    }
+
+    .bot-msg {
+      background: #225AD5;
+      color: white;
+    }
+
+    /* ------- FOOTER ------- */
+    #chat-widget-footer {
+      padding: 12px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+      background: white;
+    }
+
+    #chat-widget-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      outline: none;
+      resize: none;
+      min-height: 40px;
+      max-height: 100px;
+    }
+
+    #chat-widget-send {
+      background: #225AD5;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    /* DIGITANDO */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.04);
+      width: fit-content;
+      border-radius: 12px;
+      margin-top: 8px;
+      opacity: 0.8;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      margin-right: 4px;
+      background: #225AD5;
+      border-radius: 50%;
+      opacity: 0.5;
+      animation: blink 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes blink {
+      0% {
+        opacity: 0.3;
+        transform: translateY(0);
+      }
+
+      50% {
+        opacity: 1;
+        transform: translateY(-3px);
+      }
+
+      100% {
+        opacity: 0.3;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- BOTÃO REMOVIDO -->
+  <!-- <button id="chat-widget-button">💬</button> -->
+
+  <div id="chat-widget-container" class="fade-in">
+
+    <div id="chat-widget-header">
+      <span>Assistente afaplan</span>
+
+      <div class="header-buttons">
+        <button id="toggle-fullscreen">⤢</button>
+        <button id="close-chat">✖</button>
+      </div>
+    </div>
+
+    <div id="chat-widget-body">
+      <p class="bot-msg fade-in">
+        Olá! 👋<br>
+        Sou o assistente da afaplan. Como posso ajudar você hoje?
+      </p>
+    </div>
+
+    <div id="chat-widget-footer">
+      <textarea id="chat-widget-input" placeholder="Digite sua mensagem..."></textarea>
+      <button id="chat-widget-send">Enviar</button>
+    </div>
+
+  </div>
+
+  <script>
+
+    window.ChatWidgetConfig = {
+      webhook: {
+        url: "https://analytics-rds-n8n.3pfhv9.easypanel.host/webhook/55eeed59-e904-47e1-871f-1618cf13000d/chat",
+        route: "general"
+      }
+    };
+
+    function getChatId() {
+      let chatId = sessionStorage.getItem("chatId");
+      if (!chatId) {
+        chatId = "chat_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem("chatId", chatId);
+      }
+      return chatId;
+    }
+
+    const container = document.getElementById("chat-widget-container");
+    const closeBtn = document.getElementById("close-chat");
+
+    /* FECHAR (agora apenas esconde, mas não mostra mais botão) */
+    closeBtn.addEventListener("click", () => {
+      container.classList.remove("fade-in");
+      container.classList.add("fade-out");
+      setTimeout(() => {
+        container.style.display = "none";
+        container.classList.remove("fade-out");
+      }, 250);
+    });
+
+    /* FULLSCREEN */
+    document.getElementById("toggle-fullscreen").addEventListener("click", () => {
+      container.classList.add("fullscreen-animate");
+      container.classList.toggle("fullscreen");
+      setTimeout(() => container.classList.remove("fullscreen-animate"), 250);
+    });
+
+    /* Enter envia mensagem */
+    document.getElementById("chat-widget-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function showTyping() {
+      const chatBody = document.getElementById("chat-widget-body");
+      removeTyping();
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("typing-indicator");
+      wrapper.id = "typing-indicator";
+      wrapper.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      `;
+      chatBody.appendChild(wrapper);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function removeTyping() {
+      const t = document.getElementById("typing-indicator");
+      if (t) t.remove();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("chat-widget-input");
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chatBody = document.getElementById("chat-widget-body");
+      const userMsg = document.createElement("p");
+      userMsg.classList.add("user-msg", "fade-in");
+      userMsg.textContent = message;
+      chatBody.appendChild(userMsg);
+
+      chatBody.scrollTop = chatBody.scrollHeight;
+      input.value = "";
+
+      const chatId = getChatId();
+
+      showTyping();
+
+      fetch(window.ChatWidgetConfig.webhook.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: chatId,
+          message: message,
+          route: window.ChatWidgetConfig.webhook.route
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          removeTyping();
+          const botMsg = document.createElement("p");
+          botMsg.classList.add("bot-msg", "fade-in");
+          botMsg.innerHTML = data.output || "Desculpe, não consegui entender.";
+          chatBody.appendChild(botMsg);
+          chatBody.scrollTop = chatBody.scrollHeight;
+        })
+        .catch(err => {
+          removeTyping();
+          console.error("Erro:", err);
+        });
+    }
+
+    document.getElementById("chat-widget-send").addEventListener("click", sendMessage);
+
+  </script>
+
+</body>
+
+</html>
