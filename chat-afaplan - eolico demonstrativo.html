@@ -1,0 +1,152 @@
+<body>
+
+  <div id="chat-widget-container">
+
+    <div id="chat-widget-header">
+      <span>Assistente afaplan</span>
+
+      <div class="header-buttons">
+        <button id="toggle-fullscreen">⤢</button>
+        <button id="close-chat">✖</button>
+      </div>
+    </div>
+
+    <div id="chat-widget-body">
+      <p class="bot-msg fade-in">
+        Olá! 👋<br>
+        Sou o assistente da afaplan. Como posso ajudar você hoje?
+      </p>
+    </div>
+
+    <div id="chat-widget-footer">
+      <textarea id="chat-widget-input" placeholder="Digite sua mensagem..."></textarea>
+      <button id="chat-widget-send">Enviar</button>
+    </div>
+
+  </div>
+
+  <script>
+    window.ChatWidgetConfig = {
+      webhook: {
+        url: "https://analytics-rds-n8n.3pfhv9.easypanel.host/webhook/55eeed59-e904-47e1-871f-1618cf13000d/chat",
+        route: "general"
+      }
+    };
+
+    function getChatId() {
+      let chatId = sessionStorage.getItem("chatId");
+      if (!chatId) {
+        chatId = "chat_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem("chatId", chatId);
+      }
+      return chatId;
+    }
+
+    const container = document.getElementById("chat-widget-container");
+    const closeBtn = document.getElementById("close-chat");
+
+    /* -----------------------------
+       FUNÇÃO QUE O PANO 2VR IRÁ CHAMAR
+       ----------------------------- */
+    window.openChat = function () {
+      container.classList.add("fade-in");
+      container.style.display = "flex";
+    };
+
+    /* -----------------------------
+       FECHAR CHAT
+       ----------------------------- */
+    closeBtn.addEventListener("click", () => {
+      container.classList.remove("fade-in");
+      container.classList.add("fade-out");
+      setTimeout(() => {
+        container.style.display = "none";
+        container.classList.remove("fade-out");
+      }, 250);
+    });
+
+    /* -----------------------------
+       FULLSCREEN
+       ----------------------------- */
+    document.getElementById("toggle-fullscreen").addEventListener("click", () => {
+      container.classList.add("fullscreen-animate");
+      container.classList.toggle("fullscreen");
+      setTimeout(() => container.classList.remove("fullscreen-animate"), 250);
+    });
+
+    /* -----------------------------
+       ENVIO DE MENSAGEM
+       ----------------------------- */
+    document.getElementById("chat-widget-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function showTyping() {
+      const chatBody = document.getElementById("chat-widget-body");
+      removeTyping();
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("typing-indicator");
+      wrapper.id = "typing-indicator";
+      wrapper.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      `;
+      chatBody.appendChild(wrapper);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function removeTyping() {
+      const t = document.getElementById("typing-indicator");
+      if (t) t.remove();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("chat-widget-input");
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chatBody = document.getElementById("chat-widget-body");
+      const userMsg = document.createElement("p");
+      userMsg.classList.add("user-msg", "fade-in");
+      userMsg.textContent = message;
+      chatBody.appendChild(userMsg);
+
+      chatBody.scrollTop = chatBody.scrollHeight;
+      input.value = "";
+
+      const chatId = getChatId();
+
+      showTyping();
+
+      fetch(window.ChatWidgetConfig.webhook.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: chatId,
+          message: message,
+          route: window.ChatWidgetConfig.webhook.route
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          removeTyping();
+          const botMsg = document.createElement("p");
+          botMsg.classList.add("bot-msg", "fade-in");
+          botMsg.innerHTML = data.output || "Desculpe, não consegui entender.";
+          chatBody.appendChild(botMsg);
+          chatBody.scrollTop = chatBody.scrollHeight;
+        })
+        .catch(err => {
+          removeTyping();
+          console.error("Erro:", err);
+        });
+    }
+
+    document.getElementById("chat-widget-send").addEventListener("click", sendMessage);
+  </script>
+
+</body>
