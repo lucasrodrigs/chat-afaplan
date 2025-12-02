@@ -1,0 +1,238 @@
+<body>
+
+  <div id="chat-container">
+
+    <div id="chat-header">
+      <span>Assistente afaplan</span>
+      <div class="header-buttons">
+        <button id="toggle-fullscreen">⤢</button>
+      </div>
+    </div>
+
+    <div id="chat-body">
+      <p class="bot-msg fade-in">
+        Olá! 👋<br>
+        Sou o assistente da afaplan. Como posso ajudar você hoje?
+      </p>
+    </div>
+
+    <div id="chat-footer">
+      <textarea id="chat-input" placeholder="Digite sua mensagem..."></textarea>
+      <button id="chat-send">Enviar</button>
+    </div>
+
+  </div>
+
+  <script>
+    /* CONFIG -------------------------------------------------------------- */
+    window.ChatConfig = {
+      webhook: {
+        url: "https://analytics-rds-n8n.3pfhv9.easypanel.host/webhook/55eeed59-e904-47e1-871f-1618cf13000d/chat",
+        route: "general"
+      }
+    };
+
+    /* CHAT ID -------------------------------------------------------------- */
+    function getChatId() {
+      let id = sessionStorage.getItem("chatId");
+      if (!id) {
+        id = "chat_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem("chatId", id);
+      }
+      return id;
+    }
+
+    /* TYPING -------------------------------------------------------------- */
+    function showTyping() {
+      const body = document.getElementById("chat-body");
+      removeTyping();
+      const wrap = document.createElement("div");
+      wrap.classList.add("typing-indicator");
+      wrap.id = "typing-indicator";
+      wrap.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      `;
+      body.appendChild(wrap);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function removeTyping() {
+      const t = document.getElementById("typing-indicator");
+      if (t) t.remove();
+    }
+
+    /* ENVIO -------------------------------------------------------------- */
+    function sendMessage() {
+      const input = document.getElementById("chat-input");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const body = document.getElementById("chat-body");
+      const userMsg = document.createElement("p");
+      userMsg.classList.add("user-msg", "fade-in");
+      userMsg.textContent = msg;
+      body.appendChild(userMsg);
+      body.scrollTop = body.scrollHeight;
+
+      input.value = "";
+
+      showTyping();
+
+      fetch(window.ChatConfig.webhook.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: getChatId(),
+          message: msg,
+          route: window.ChatConfig.webhook.route
+        })
+      })
+        .then(r => r.json())
+        .then(data => {
+          removeTyping();
+          const b = document.createElement("p");
+          b.classList.add("bot-msg", "fade-in");
+          b.innerHTML = data.output || "Desculpe, não consegui entender.";
+          body.appendChild(b);
+          body.scrollTop = body.scrollHeight;
+        })
+        .catch(err => {
+          console.error("Erro:", err);
+          removeTyping();
+        });
+    }
+
+    document.getElementById("chat-send").addEventListener("click", sendMessage);
+
+    document.getElementById("chat-input").addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    /* FULLSCREEN ----------------------------------------------------------- */
+    document.getElementById("toggle-fullscreen").addEventListener("click", () => {
+      const c = document.getElementById("chat-container");
+      c.classList.toggle("fullscreen");
+    });
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      font-family: Arial, sans-serif;
+    }
+
+    #chat-container {
+      width: 100%;
+      height: 100vh;
+      background: #1b1b1b;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      border-radius: 0;
+    }
+
+    #chat-header {
+      background: #222;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+      border-bottom: 1px solid #333;
+    }
+
+    #chat-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    #chat-footer {
+      display: flex;
+      padding: 12px;
+      background: #222;
+      border-top: 1px solid #333;
+    }
+
+    #chat-input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 4px;
+      resize: none;
+      background: #333;
+      border: none;
+      color: #fff;
+      height: 40px;
+    }
+
+    #chat-send {
+      padding: 10px 18px;
+      margin-left: 8px;
+      background: #4CAF50;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .user-msg {
+      background: #2d7bf3;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 8px 0;
+      max-width: 80%;
+      align-self: flex-end;
+    }
+
+    .bot-msg {
+      background: #333;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 8px 0;
+      max-width: 80%;
+      align-self: flex-start;
+    }
+
+    .fade-in { animation: fadein .25s; }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+    .typing-indicator {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: #888;
+      border-radius: 50%;
+      animation: blink 1.4s infinite both;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: .2s; }
+    .typing-dot:nth-child(3) { animation-delay: .4s; }
+
+    @keyframes blink {
+      0% { opacity: .2; }
+      20% { opacity: 1; }
+      100% { opacity: .2; }
+    }
+
+    .fullscreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      z-index: 99999;
+    }
+  </style>
+
+</body>
